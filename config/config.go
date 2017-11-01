@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/widuu/goini"
 	"os"
+	"strconv"
 )
 
 const (
@@ -23,6 +24,7 @@ type conf struct {
 
 	MziTuStartUrl string // start url of mzitu.com
 	MziTuMode     string // crawl mode: daily or full
+	MzituTop      int    // top n albums
 }
 
 var Conf *conf
@@ -82,6 +84,13 @@ func Init() {
 		mode = "daily" // default "daily" mode
 	}
 	myconf.MziTuMode = mode
+
+	topn := config.GetValue("mzitu", "top")
+	topnInt, err := strconv.Atoi(topn)
+	if err != nil {
+		topnInt = 100
+	}
+	myconf.MzituTop = topnInt
 
 	Conf = &myconf
 }

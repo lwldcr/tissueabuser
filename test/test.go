@@ -39,7 +39,7 @@ func main() {
 	wg.Add(1)
 
 	mzitu := tissueabsuer.NewMzituCrawler(conf.MziTuStartUrl,
-		conf.MziTuMode, conf.DestDir, client, &wg)
+		conf.MziTuMode, conf.MzituTop, conf.DestDir, client, &wg)
 
 	mzitu.Crawl()
 	wg.Wait()

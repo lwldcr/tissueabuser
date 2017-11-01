@@ -26,6 +26,7 @@ type MzituCrawler struct {
 	Action     string          // actions: full/daily/category
 	DestDir    string          // where to store files
 	Mode       string          // mode: "daily" or "full"
+	Topn       int             // topn
 	Client     *Client         // client
 	Wg         *sync.WaitGroup // sync
 	Albums     chan *Album     // Albums
@@ -33,7 +34,7 @@ type MzituCrawler struct {
 	CurAlbum   *Album          // current album
 }
 
-func NewMzituCrawler(url string, mode string, dest string,
+func NewMzituCrawler(url string, mode string, top int, dest string,
 	client *Client, wg *sync.WaitGroup) *MzituCrawler {
 
 	albums := make(chan *Album)
@@ -53,6 +54,7 @@ func NewMzituCrawler(url string, mode string, dest string,
 		Wg:         wg,
 		Albums:     albums,
 		MainImgPat: mainImgPattern,
+		Topn:       top,
 	}
 	return &mzitu
 }
@@ -93,7 +95,10 @@ func (m *MzituCrawler) GetLinks() {
 	//matcher := albumPattern.FindAllStringSubmatch(content, -1)
 
 	albums := make(map[string]string)
-	for _, a := range matcher {
+	for i, a := range matcher {
+		if m.Mode != "full" && i >= m.Topn { // only crawl topn if mode != "full"
+			break
+		}
 		albums[a[2]] = a[1] // album: { "title": link }
 	}
 
