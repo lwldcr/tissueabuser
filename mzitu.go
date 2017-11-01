@@ -13,7 +13,7 @@ import (
 )
 
 type Crawler interface {
-	Craw()
+	Crawl()
 }
 
 type Album struct { // album struct definition
@@ -58,6 +58,13 @@ func NewMzituCrawler(url string, mode string, dest string,
 }
 
 func (m *MzituCrawler) Crawl() {
+	go m.GetLinks()
+	m.CrawlAlbums()
+
+	close(m.Albums)
+}
+
+func (m *MzituCrawler) GetLinks() {
 	defer m.Wg.Done()
 	fmt.Println("start crawling mzitu:", m.StartUrl)
 

@@ -41,7 +41,6 @@ func main() {
 	mzitu := tissueabsuer.NewMzituCrawler(conf.MziTuStartUrl,
 		conf.MziTuMode, conf.DestDir, client, &wg)
 
-	go mzitu.Crawl()
-	mzitu.CrawlAlbums()
+	mzitu.Crawl()
 	wg.Wait()
 }
