@@ -91,14 +91,15 @@ func (m *MzituCrawler) GetLinks() {
 	//dateStr := strconv.Itoa(day) + "日: "
 	albumPattern, _ := regexp.Compile("<a href=\"(http://.*?)\" target=\"_blank\">(.*?)</a>")
 
-	matcher := albumPattern.FindAllStringSubmatch(content, -1)
+	var topn int = -1
+	if m.Mode != "full" {
+		topn = m.Topn
+	}
+	matcher := albumPattern.FindAllStringSubmatch(content, topn)
 	//matcher := albumPattern.FindAllStringSubmatch(content, -1)
 
 	albums := make(map[string]string)
-	for i, a := range matcher {
-		if m.Mode != "full" && i >= m.Topn { // only crawl topn if mode != "full"
-			break
-		}
+	for _, a := range matcher {
 		albums[a[2]] = a[1] // album: { "title": link }
 	}
 
