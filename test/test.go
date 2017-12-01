@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"tissueabsuer"
-	"tissueabsuer/config"
+	"tissueabuser"
+	"tissueabuser/config"
 )
 
 const (
