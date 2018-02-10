@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"tissueabuser"
-	"tissueabuser/config"
+	"github.com/lwldcr/tissueabuser"
+	"github.com/lwldcr/tissueabuser/config"
 )
 
 const (
