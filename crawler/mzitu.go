@@ -1,8 +1,8 @@
-package tissueabsuer
+package crawler
 
 import (
-	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -11,6 +11,12 @@ import (
 	"sync"
 	"time"
 )
+
+var logger *log.Logger
+
+func SetLogger(l *log.Logger) {
+	logger = l
+}
 
 type Crawler interface {
 	Crawl()
@@ -42,7 +48,7 @@ func NewMzituCrawler(url string, mode string, top int, dest string,
 	mainImgPattern, err := regexp.Compile("<div class=\"main-image\"><p><a href=\"(.*?)\" ><img src=\"(.*?)\"")
 
 	if err != nil {
-		fmt.Println("cannot compile regexp for main image")
+		logger.Println("cannot compile regexp for main image")
 		os.Exit(REGEXPERR)
 	}
 
@@ -68,12 +74,12 @@ func (m *MzituCrawler) Crawl() {
 
 func (m *MzituCrawler) GetLinks() {
 	defer m.Wg.Done()
-	fmt.Println("start crawling mzitu:", m.StartUrl)
+	logger.Println("start crawling mzitu:", m.StartUrl)
 
 	r, _ := http.NewRequest("GET", m.StartUrl, nil)
 	resp, err := m.Client.DoRequest(r, "")
 	if err != nil {
-		fmt.Println("request failed:", err)
+		logger.Println("request failed:", err)
 		os.Exit(REQUESTERR)
 	}
 
@@ -81,7 +87,7 @@ func (m *MzituCrawler) GetLinks() {
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("read response body failed:", err)
+		logger.Println("read response body failed:", err)
 		os.Exit(READDATAERR)
 	}
 
@@ -112,27 +118,27 @@ func (m *MzituCrawler) GetLinks() {
 }
 
 func (m *MzituCrawler) CrawlAlbums() {
-	fmt.Println("listening for albums...")
+	logger.Println("listening for albums...")
 	for {
 		select {
 		case album := <-m.Albums:
 			if album.url == "" {
-				fmt.Println("got blank album, stop crawling")
+				logger.Println("got blank album, stop crawling")
 				return
 			}
 
-			fmt.Println("got album:", album.title, album.url)
+			logger.Println("got album:", album.title, album.url)
 			albumDir := strings.Join([]string{m.DestDir, album.title}, string(os.PathSeparator))
 
 			if stat, err := os.Stat(albumDir); os.IsNotExist(err) {
-				fmt.Println("trying to build album dir")
+				logger.Println("trying to build album dir")
 				if err := os.Mkdir(albumDir, os.ModePerm); err != nil {
-					fmt.Println("failed:", err)
+					logger.Println("failed:", err)
 					continue
 				}
-				fmt.Println("dir created successfully")
+				logger.Println("dir created successfully")
 			} else if !stat.IsDir() {
-				fmt.Println("path already exists but not a valid directory:", albumDir)
+				logger.Println("path already exists but not a valid directory:", albumDir)
 				continue
 			}
 
@@ -150,14 +156,14 @@ func (m *MzituCrawler) CrawlPage(url string) {
 	r, _ := http.NewRequest("GET", url, nil)
 	resp, err := m.Client.DoRequest(r, "")
 	if err != nil {
-		fmt.Println("fetching album failed:", err)
+		logger.Println("fetching album failed:", err)
 		return
 	}
 
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("read data failed:", err)
+		logger.Println("read data failed:", err)
 		return
 	}
 
@@ -174,18 +180,18 @@ func (m *MzituCrawler) CrawlPage(url string) {
 }
 
 func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string) {
-	fmt.Println("got image link:", imgUrl)
+	logger.Println("got image link:", imgUrl)
 	r, _ := http.NewRequest("GET", imgUrl, nil)
 	resp, err := m.Client.DoRequest(r, referer)
 	if err != nil {
-		fmt.Println("cannot get img:", err)
+		logger.Println("cannot get img:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("read data failed:", err)
+		logger.Println("read data failed:", err)
 		return
 	}
 
@@ -194,13 +200,13 @@ func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string)
 	fullName := strings.Join([]string{m.DestDir, m.CurAlbum.title, fileName}, string(os.PathSeparator))
 
 	if _, err := os.Stat(fullName); os.IsExist(err) {
-		fmt.Println("warning: already exists:", fullName)
+		logger.Println("warning: already exists:", fullName)
 		goto RECURSIVE
 	}
-	fmt.Println("storing file:", fullName)
+	logger.Println("storing file:", fullName)
 	err = ioutil.WriteFile(fullName, data, os.ModePerm)
 	if err != nil {
-		fmt.Println("store file failed:", err)
+		logger.Println("store file failed:", err)
 	}
 
 RECURSIVE:
@@ -213,7 +219,7 @@ RECURSIVE:
 func isNewAlbum(url string) bool {
 	match, err := regexp.Match("http://www.mzitu.com/\\d+/\\d+", []byte(url))
 	if err != nil {
-		fmt.Println("matching failed:", err)
+		logger.Println("matching failed:", err)
 		return true
 	}
 	return !match

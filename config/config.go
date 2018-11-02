@@ -4,17 +4,21 @@
 package config
 
 import (
-	"fmt"
-	"github.com/widuu/goini"
+	"log"
 	"os"
+	"path/filepath"
 	"strconv"
+
+	"github.com/widuu/goini"
 )
+
+var logger *log.Logger
 
 const (
 	FileNotFoundErr    = -10
 	OptionsNotValidErr = -20
 	MakeDirectoryErr   = -30
-	FilePath           = "./conf.ini"
+	FilePath           = "conf.ini"
 )
 
 type conf struct {
@@ -31,15 +35,18 @@ var Conf *conf
 
 // read configuration
 
-func Init() {
+func Init(dir string, l *log.Logger) {
+    logger = l
+
 	var myconf conf
 
-	if _, err := os.Stat(FilePath); os.IsNotExist(err) {
-		fmt.Println("cannot access configuration file:", err)
+	configPath := filepath.Join(dir, FilePath)
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		logger.Println("cannot access configuration file:", err)
 		os.Exit(FileNotFoundErr)
 	}
 
-	config := goini.SetConfig("./conf.ini")
+	config := goini.SetConfig(configPath)
 	config.ReadList()
 
 	// read dest config and check validation
@@ -50,14 +57,14 @@ func Init() {
 
 	stat, err := os.Stat(dest)
 	if os.IsNotExist(err) {
-		fmt.Println("dest dir not exist, will try to make dir")
+		logger.Println("dest dir not exist, will try to make dir")
 		if err1 := os.Mkdir(dest, os.ModePerm); err1 != nil {
-			fmt.Println("making dir failed:", err)
+			logger.Println("making dir failed:", err)
 			os.Exit(MakeDirectoryErr)
 		}
-		fmt.Println("new directory created:", dest)
+		logger.Println("new directory created:", dest)
 	} else if !stat.IsDir() {
-		fmt.Println("dest dir is not a valid directory")
+		logger.Println("dest dir is not a valid directory")
 		os.Exit(OptionsNotValidErr)
 	}
 	myconf.DestDir = dest
@@ -74,7 +81,7 @@ func Init() {
 	// read target sites
 	target := config.GetValue("mzitu", "start")
 	if target == "" {
-		fmt.Println("No target url given, exiting!")
+		logger.Println("No target url given, exiting!")
 		os.Exit(OptionsNotValidErr)
 	}
 	myconf.MziTuStartUrl = target
