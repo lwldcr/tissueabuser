@@ -17,24 +17,6 @@ edit config/conf.ini, set proper destination directory, and run commands:
 
 ```bash
 make
+
 ./run.sh
-
->
-temporarily change working dir to: /Users/bruce/Code/go/src/tissueabsuer/test/../config
-change working dir back: /Users/bruce/Code/go/src/tissueabsuer/test
-listening for albums...
-start crawling mzitu: http://mzitu.com/all
-got album: 沙滩尤物艺轩 海风撩起的不只她的长发,还有春心荡漾 http://www.mzitu.com/107734
-trying to build album dir
-dir created successfully
-got image link: http://i.meizitu.net/2017/11/02a01.jpg
-storing file: /Users/bruce/Downloads/Image/沙滩尤物艺轩 海风撩起的不只她的长发,还有春心荡漾/02a01.jpg
-got image link: http://i.meizitu.net/2017/11/02a02.jpg
-storing file: /Users/bruce/Downloads/Image/沙滩尤物艺轩 海风撩起的不只她的长发,还有春心荡漾/02a02.jpg
-got image link: http://i.meizitu.net/2017/11/02a03.jpg
-storing file: /Users/bruce/Downloads/Image/沙滩尤物艺轩 海风撩起的不只她的长发,还有春心荡漾/02a03.jpg
-got image link: http://i.meizitu.net/2017/11/02a04.jpg
-storing file: /Users/bruce/Downloads/Image/沙滩尤物艺轩 海风撩起的不只她的长发,还有春心荡漾/02a04.jpg
-....
-
 ```
