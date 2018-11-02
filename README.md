@@ -13,9 +13,11 @@
 #### 运行
 ------
 
+edit config/conf.ini, set proper destination directory, and run commands:
+
 ```bash
-cd tissueabsuer/test 
-go run test.go
+make
+./run.sh
 
 >
 temporarily change working dir to: /Users/bruce/Code/go/src/tissueabsuer/test/../config
