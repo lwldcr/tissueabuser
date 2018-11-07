@@ -208,7 +208,6 @@ func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string,
 	urlParts := strings.Split(imgUrl, "/")
 	fileName := urlParts[len(urlParts)-1]
 	fullName := strings.Join([]string{m.DestDir, album.title, fileName}, string(os.PathSeparator))
-	logger.Println("storing file path:", fullName)
 	if _, err := os.Stat(fullName); os.IsExist(err) {
 		logger.Println("warning: already exists:", fullName)
 		goto RECURSIVE
