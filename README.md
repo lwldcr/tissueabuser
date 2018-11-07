@@ -16,7 +16,14 @@
 edit config/conf.ini, set proper destination directory, and run commands:
 
 ```bash
+# prepare config file
+cd config
+cp conf.ini.example conf.ini
+# EDIT conf.ini as you wish
+
+# build
 make
 
+# run
 ./run.sh
 ```
