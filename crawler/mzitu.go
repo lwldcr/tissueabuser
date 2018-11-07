@@ -66,15 +66,14 @@ func NewMzituCrawler(url string, mode string, top int, dest string,
 }
 
 func (m *MzituCrawler) Crawl() {
+	logger.Println("start crawling")
 	go m.GetLinks()
 	m.CrawlAlbums()
-
-	close(m.Albums)
 }
 
 func (m *MzituCrawler) GetLinks() {
 	defer m.Wg.Done()
-	logger.Println("start crawling mzitu:", m.StartUrl)
+	logger.Println("start crawling mzitu album links:", m.StartUrl)
 
 	r, _ := http.NewRequest("GET", m.StartUrl, nil)
 	resp, err := m.Client.DoRequest(r, "")
@@ -97,13 +96,14 @@ func (m *MzituCrawler) GetLinks() {
 	//dateStr := strconv.Itoa(day) + "日: "
 	albumPattern, _ := regexp.Compile("<a href=\"(http://.*?)\" target=\"_blank\">(.*?)</a>")
 
-	var topn int = -1
+	topN := -1
 	if m.Mode != "full" {
-		topn = m.Topn
+		topN = m.Topn
 	}
-	matcher := albumPattern.FindAllStringSubmatch(content, topn)
-	//matcher := albumPattern.FindAllStringSubmatch(content, -1)
+	logger.Printf("find matching albums of top: %d", topN)
+	matcher := albumPattern.FindAllStringSubmatch(content, topN)
 
+	logger.Printf("got matched albums: %d", len(matcher))
 	albums := make(map[string]string)
 	for _, a := range matcher {
 		albums[a[2]] = a[1] // album: { "title": link }
@@ -114,44 +114,54 @@ func (m *MzituCrawler) GetLinks() {
 		m.Albums <- &album
 	}
 
-	m.Albums <- &Album{url: ""}
+	// close albums channel
+	logger.Printf("all %d albums sent, will close albums channel", len(albums))
+	close(m.Albums)
 }
 
 func (m *MzituCrawler) CrawlAlbums() {
 	logger.Println("listening for albums...")
-	for {
+	var wg sync.WaitGroup
+	FOR:for {
 		select {
-		case album := <-m.Albums:
-			if album.url == "" {
-				logger.Println("got blank album, stop crawling")
-				return
+		case album, ok := <-m.Albums:
+			if !ok {
+				logger.Println("albums channel closed, will exit crawler after unfinished jobs done")
+				break FOR
 			}
-
-			logger.Println("got album:", album.title, album.url)
-			albumDir := strings.Join([]string{m.DestDir, album.title}, string(os.PathSeparator))
-
-			if stat, err := os.Stat(albumDir); os.IsNotExist(err) {
-				logger.Println("trying to build album dir")
-				if err := os.Mkdir(albumDir, os.ModePerm); err != nil {
-					logger.Println("failed:", err)
-					continue
-				}
-				logger.Println("dir created successfully")
-			} else if !stat.IsDir() {
-				logger.Println("path already exists but not a valid directory:", albumDir)
-				continue
-			}
-
-			m.CurAlbum = album
-			m.CrawlPage(album.url)
-
-			time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
+			wg.Add(1)
+			go m.DoCrawl(album, &wg)
 		}
 	}
+
+	wg.Wait()
+	logger.Println("all crawling jobs done, returning")
+}
+
+func (m *MzituCrawler) DoCrawl(album *Album, wg *sync.WaitGroup) {
+	defer wg.Done()
+	logger.Println("got album:", album.title, album.url)
+	albumDir := strings.Join([]string{m.DestDir, album.title}, string(os.PathSeparator))
+
+	if stat, err := os.Stat(albumDir); os.IsNotExist(err) {
+		logger.Println("trying to build album dir")
+		if err := os.Mkdir(albumDir, os.ModePerm); err != nil {
+			logger.Println("failed:", err)
+			return
+		}
+		logger.Println("dir created successfully")
+	} else if !stat.IsDir() {
+		logger.Println("path already exists but not a valid directory:", albumDir)
+		return
+	}
+
+	//m.CurAlbum = album
+	m.CrawlPage(album.url, album)
+	time.Sleep(time.Duration(rand.Intn(3)) * time.Millisecond)
 }
 
 // crawl single page
-func (m *MzituCrawler) CrawlPage(url string) {
+func (m *MzituCrawler) CrawlPage(url string, album *Album) {
 
 	r, _ := http.NewRequest("GET", url, nil)
 	resp, err := m.Client.DoRequest(r, "")
@@ -175,11 +185,11 @@ func (m *MzituCrawler) CrawlPage(url string) {
 		nextPage := matched[1]
 		imgUrl := matched[2]
 		time.Sleep(time.Duration(rand.Intn(5)) * time.Second)
-		m.CrawlNext(url, imgUrl, nextPage)
+		m.CrawlNext(url, imgUrl, nextPage, album)
 	}
 }
 
-func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string) {
+func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string, album *Album) {
 	logger.Println("got image link:", imgUrl)
 	r, _ := http.NewRequest("GET", imgUrl, nil)
 	resp, err := m.Client.DoRequest(r, referer)
@@ -197,8 +207,8 @@ func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string)
 
 	urlParts := strings.Split(imgUrl, "/")
 	fileName := urlParts[len(urlParts)-1]
-	fullName := strings.Join([]string{m.DestDir, m.CurAlbum.title, fileName}, string(os.PathSeparator))
-
+	fullName := strings.Join([]string{m.DestDir, album.title, fileName}, string(os.PathSeparator))
+	logger.Println("storing file path:", fullName)
 	if _, err := os.Stat(fullName); os.IsExist(err) {
 		logger.Println("warning: already exists:", fullName)
 		goto RECURSIVE
@@ -211,7 +221,7 @@ func (m *MzituCrawler) CrawlNext(referer string, imgUrl string, nextPage string)
 
 RECURSIVE:
 	if !isNewAlbum(nextPage) {
-		m.CrawlPage(nextPage)
+		m.CrawlPage(nextPage, album)
 	}
 }
 
