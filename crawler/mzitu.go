@@ -94,7 +94,7 @@ func (m *MzituCrawler) GetLinks() {
 
 	//_, _, day := time.Now().Date()
 	//dateStr := strconv.Itoa(day) + "日: "
-	albumPattern, _ := regexp.Compile("<a href=\"(http://.*?)\" target=\"_blank\">(.*?)</a>")
+	albumPattern, _ := regexp.Compile("<a href=\"(http[s]?://.*?)\" target=\"_blank\">(.*?)</a>")
 
 	topN := -1
 	if m.Mode != "full" {
